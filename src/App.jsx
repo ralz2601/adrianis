@@ -1,8 +1,17 @@
-import { useState, useMemo, useRef } from "react";
-import * as XLSX from "xlsx";
+import { useState, useMemo, useRef, useEffect } from "react";
 
-// Wrapper para mantener compatibilidad con el hook useXLSX
-function useXLSX() { return XLSX; }
+// Carga SheetJS dinámicamente desde CDN
+function useXLSX() {
+  const [XLSX, setXLSX] = useState(null);
+  useEffect(() => {
+    if (window.XLSX) { setXLSX(window.XLSX); return; }
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    script.onload = () => setXLSX(window.XLSX);
+    document.head.appendChild(script);
+  }, []);
+  return XLSX;
+}
 
 const PRODUCTOS_INIT = [
   { id: "AA-001", nombre: "Termo Skinny" },
