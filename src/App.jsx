@@ -88,14 +88,6 @@ function diffPct(actual, anterior) {
   return ((actual - anterior) / anterior) * 100;
 }
 
-function useStore(key, init) {
-  const [val, setVal] = useState(() => {
-    try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : init; } catch { return init; }
-  });
-  const save = (v) => { setVal(v); try { localStorage.setItem(key, JSON.stringify(v)); } catch {} };
-  return [val, save];
-}
-
 function Badge({ children, color = "gray" }) {
   const colors = {
     green: "bg-emerald-100 text-emerald-700 border-emerald-200",
