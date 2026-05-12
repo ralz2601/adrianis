@@ -184,11 +184,6 @@ function Login({ onLogin }) {
             {err && <p className="text-red-500 text-xs text-center">{err}</p>}
             <Btn onClick={handle} size="lg" className="w-full mt-1">Iniciar Sesión</Btn>
           </div>
-          <div className="mt-4 p-3 bg-gray-50 rounded-xl text-xs text-gray-400">
-            <p className="font-semibold text-gray-500 mb-1">Cuentas demo:</p>
-            <p>admin@adrianis.com / admin123</p>
-            <p>usuario@adrianis.com / user123</p>
-          </div>
         </Card>
       </div>
     </div>
