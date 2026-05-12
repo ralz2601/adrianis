@@ -1,16 +1,34 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef } from "react";
+import * as XLSX from "xlsx";
+import { leerSheet, escribirSheet } from "./sheets.js";
 
-// Carga SheetJS dinámicamente desde CDN
-function useXLSX() {
-  const [XLSX, setXLSX] = useState(null);
-  useEffect(() => {
-    if (window.XLSX) { setXLSX(window.XLSX); return; }
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-    script.onload = () => setXLSX(window.XLSX);
-    document.head.appendChild(script);
-  }, []);
-  return XLSX;
+function useXLSX() { return XLSX; }
+
+function useStore(key, init, sheetName) {
+  const [val, setVal] = useState(() => {
+    try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : init; } catch { return init; }
+  });
+
+  const save = async (v) => {
+    setVal(v);
+    try { localStorage.setItem(key, JSON.stringify(v)); } catch {}
+    if (sheetName) {
+      try { await escribirSheet(sheetName, v); } catch(e) { console.error("Sheets error:", e); }
+    }
+  };
+
+  const syncFromSheet = async () => {
+    if (!sheetName) return;
+    try {
+      const data = await leerSheet(sheetName);
+      if (data && data.length > 0) {
+        setVal(data);
+        try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
+      }
+    } catch(e) { console.error("Sync error:", e); }
+  };
+
+  return [val, save, syncFromSheet];
 }
 
 const PRODUCTOS_INIT = [
@@ -1070,12 +1088,21 @@ function Importar({ setProductos, setTemperaturas, setPrecios, setCostos, setIng
 export default function App() {
   const [usuario, setUsuario] = useState(null);
   const [seccion, setSeccion] = useState("dashboard");
-  const [productos,    setProductos]    = useStore("aa_productos",    PRODUCTOS_INIT);
-  const [temperaturas, setTemperaturas] = useStore("aa_temperaturas", TEMPERATURAS_INIT);
-  const [precios,      setPrecios]      = useStore("aa_precios",      PRECIOS_INIT);
-  const [costos,       setCostos]       = useStore("aa_costos",       COSTOS_INIT);
-  const [ingresos,     setIngresos]     = useStore("aa_ingresos",     []);
-  const [gastos,       setGastos]       = useStore("aa_gastos",       []);
+  const [syncMsg, setSyncMsg] = useState("");
+
+  const [productos,    setProductos,    syncProductos]    = useStore("aa_productos",    PRODUCTOS_INIT,    "Productos");
+  const [temperaturas, setTemperaturas, syncTemperaturas] = useStore("aa_temperaturas", TEMPERATURAS_INIT, "Temperaturas");
+  const [precios,      setPrecios,      syncPrecios]      = useStore("aa_precios",      PRECIOS_INIT,      "Precios");
+  const [costos,       setCostos,       syncCostos]       = useStore("aa_costos",       COSTOS_INIT,       "Margen");
+  const [ingresos,     setIngresos,     syncIngresos]     = useStore("aa_ingresos",     [],                "Ingresos");
+  const [gastos,       setGastos,       syncGastos]       = useStore("aa_gastos",       [],                "Gastos");
+
+  const sincronizarTodo = async () => {
+    setSyncMsg("Sincronizando...");
+    await Promise.all([syncProductos(), syncTemperaturas(), syncPrecios(), syncCostos(), syncIngresos(), syncGastos()]);
+    setSyncMsg("✅ Sincronizado");
+    setTimeout(() => setSyncMsg(""), 3000);
+  };
 
   if (!usuario) return <Login onLogin={setUsuario}/>;
 
@@ -1098,6 +1125,8 @@ export default function App() {
           <span className="font-black text-gray-800 text-lg tracking-tight">AdriAnis</span>
         </div>
         <div className="flex items-center gap-3">
+          {syncMsg && <span className="text-xs text-emerald-600 font-semibold">{syncMsg}</span>}
+          <Btn onClick={sincronizarTodo} variant="secondary" size="sm">⟳ Sincronizar</Btn>
           <span className="text-xs text-gray-400 hidden sm:block">{usuario.nombre}</span>
           <Btn onClick={()=>setUsuario(null)} variant="ghost" size="sm">Salir</Btn>
         </div>
