@@ -64,8 +64,8 @@ const COSTOS_INIT = [
 ];
 
 const USUARIOS = [
-  { email: "admin@adrianis.com", password: "admin123", nombre: "Administrador", rol: "admin" },
-  { email: "usuario@adrianis.com", password: "user123", nombre: "Colaborador", rol: "usuario" },
+  { email: "adrianl.zamora26@gmail.com", password: "Zamora007", nombre: "Adrian Lopez", rol: "admin" },
+  { email: "ln.anahiespinozaloera@gmail.com", password: "Anahi1992", nombre: "Anahí Espinoza", rol: "usuario" },
 ];
 
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
