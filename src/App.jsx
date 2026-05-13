@@ -196,20 +196,25 @@ function Dashboard({ ingresos, gastos, costos, precios }) {
   const [anio, setAnio] = useState(now.getFullYear());
   const [mes, setMes] = useState(now.getMonth());
 
-  const filtrar = (arr, a, m, esMes) => arr.filter(r => {
-    if (!r.fecha) return false;
-    const [ry, rm] = r.fecha.split("-").map(Number);
-    if (esMes) return ry === a && (rm - 1) === m;
-    return ry === a;
-  });
+  const filtrar = (arr, a, m, esMes) => {
+    if (esMes === "todo") return arr;
+    return arr.filter(r => {
+      if (!r.fecha) return false;
+      const [ry, rm] = r.fecha.split("-").map(Number);
+      if (esMes) return ry === a && (rm - 1) === m;
+      return ry === a;
+    });
+  };
 
-  const ingActual   = useMemo(() => filtrar(ingresos, anio, mes, modo==="mes"), [ingresos, anio, mes, modo]);
-  const gasActual   = useMemo(() => filtrar(gastos,   anio, mes, modo==="mes"), [gastos,   anio, mes, modo]);
+  const ingActual   = useMemo(() => filtrar(ingresos, anio, mes, modo==="mes" ? true : modo==="año" ? false : "todo"), [ingresos, anio, mes, modo]);
+  const gasActual   = useMemo(() => filtrar(gastos,   anio, mes, modo==="mes" ? true : modo==="año" ? false : "todo"), [gastos,   anio, mes, modo]);
   const ingAnterior = useMemo(() => {
+    if (modo==="todo") return [];
     if (modo==="mes") { const pm=mes===0?11:mes-1, pa=mes===0?anio-1:anio; return filtrar(ingresos,pa,pm,true); }
     return filtrar(ingresos,anio-1,mes,false);
   }, [ingresos,anio,mes,modo]);
   const gasAnterior = useMemo(() => {
+    if (modo==="todo") return [];
     if (modo==="mes") { const pm=mes===0?11:mes-1, pa=mes===0?anio-1:anio; return filtrar(gastos,pa,pm,true); }
     return filtrar(gastos,anio-1,mes,false);
   }, [gastos,anio,mes,modo]);
@@ -219,6 +224,20 @@ function Dashboard({ ingresos, gastos, costos, precios }) {
   const ganancia = totalIng - totalGas;
   const prevIng  = suma(ingAnterior), prevGas = suma(gasAnterior);
   const prevGan  = prevIng - prevGas;
+
+  // Utilidades desde gastos con concepto "Utilidad"
+  const utilidades = useMemo(() => {
+    return gasActual.filter(r => {
+      const c = (r.nombreProducto||r.concepto||r.proveedor||"").toLowerCase();
+      return c.includes("utilidad");
+    }).reduce((s,r)=>s+(r.precioFinal||0),0);
+  },[gasActual]);
+  const utilPrev = useMemo(() => {
+    return gasAnterior.filter(r => {
+      const c = (r.nombreProducto||r.concepto||r.proveedor||"").toLowerCase();
+      return c.includes("utilidad");
+    }).reduce((s,r)=>s+(r.precioFinal||0),0);
+  },[gasAnterior]);
 
   const aniosDisp = useMemo(() => {
     const ys = new Set([...[...ingresos,...gastos].map(r=>r.fecha?.split("-")[0]).filter(Boolean).map(Number), now.getFullYear()]);
@@ -264,7 +283,7 @@ function Dashboard({ ingresos, gastos, costos, precios }) {
       const pr=precios.find(p=>p.productoId===r.codigoProducto);
       const qty=r.cantidad||1, monto=r.precioFinal||0, costoTotal=costoU*qty;
       let tipo="manual";
-      if(pr){ const pu=r.precioUnitario; if(pu===pr.precioSuperMayoreo) tipo="super"; else if(pu===pr.precioMayoreo) tipo="mayoreo"; else if(pu===pr.precioNormal) tipo="normal"; }
+      if(pr){ const pu=Number(r.precioUnitario); if(pu===pr.precioSuperMayoreo) tipo="super"; else if(pu===pr.precioMayoreo) tipo="mayoreo"; else if(pu===pr.precioNormal) tipo="normal"; }
       tipos[tipo].qty+=qty; tipos[tipo].monto+=monto; tipos[tipo].costo+=costoTotal;
     });
     return tipos;
@@ -272,12 +291,14 @@ function Dashboard({ ingresos, gastos, costos, precios }) {
 
   const totalAn = Object.values(analisisPrecios).reduce((s,t)=>({qty:s.qty+t.qty,monto:s.monto+t.monto,costo:s.costo+t.costo}),{qty:0,monto:0,costo:0});
 
+  const periodoLabel = modo==="mes" ? `${MESES[mes]} ${anio}` : modo==="año" ? `Año ${anio}` : "Todo el historial";
+
   const Chip = ({active,onClick,children}) => (
     <button onClick={onClick} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${active?"bg-rose-500 text-white shadow":"bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>{children}</button>
   );
 
   const KPI = ({label,actual,prev,color="rose"}) => {
-    const diff = diffPct(actual,prev);
+    const diff = modo==="todo" ? null : diffPct(actual,prev);
     const sube = diff>0;
     const bgs = {rose:"border-rose-200 bg-rose-50",emerald:"border-emerald-200 bg-emerald-50",blue:"border-blue-200 bg-blue-50",amber:"border-amber-200 bg-amber-50"};
     const txs = {rose:"text-rose-600",emerald:"text-emerald-600",blue:"text-blue-600",amber:"text-amber-600"};
@@ -287,7 +308,7 @@ function Dashboard({ ingresos, gastos, costos, precios }) {
         <p className={`text-xl font-black ${txs[color]}`}>{fmt(actual)}</p>
         <div className="flex items-center gap-1 mt-1 flex-wrap">
           {diff===null
-            ? <span className="text-xs text-gray-300">Sin período anterior</span>
+            ? <span className="text-xs text-gray-300">{modo==="todo"?"Historial completo":"Sin período anterior"}</span>
             : <><span className={`text-xs font-bold ${sube?"text-emerald-600":"text-red-500"}`}>{sube?"+":""}{diff.toFixed(1)}%</span><span className="text-xs text-gray-400">vs anterior ({fmt(prev)})</span></>
           }
         </div>
@@ -320,12 +341,13 @@ function Dashboard({ ingresos, gastos, costos, precios }) {
       <div className="flex flex-col gap-3">
         <div>
           <h2 className="text-2xl font-black text-gray-800">Dashboard</h2>
-          <p className="text-gray-400 text-sm">Período: <strong className="text-gray-700">{modo==="mes"?`${MESES[mes]} ${anio}`:`Año ${anio}`}</strong></p>
+          <p className="text-gray-400 text-sm">Período: <strong className="text-gray-700">{periodoLabel}</strong></p>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
           <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
             <Chip active={modo==="mes"} onClick={()=>setModo("mes")}>Por Mes</Chip>
             <Chip active={modo==="año"} onClick={()=>setModo("año")}>Por Año</Chip>
+            <Chip active={modo==="todo"} onClick={()=>setModo("todo")}>Historial</Chip>
           </div>
           {modo==="mes" && (
             <select value={mes} onChange={e=>setMes(Number(e.target.value))}
@@ -333,10 +355,12 @@ function Dashboard({ ingresos, gastos, costos, precios }) {
               {MESES.map((m,i)=><option key={i} value={i}>{m}</option>)}
             </select>
           )}
-          <select value={anio} onChange={e=>setAnio(Number(e.target.value))}
-            className="border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-rose-300">
-            {aniosDisp.map(a=><option key={a} value={a}>{a}</option>)}
-          </select>
+          {modo!=="todo" && (
+            <select value={anio} onChange={e=>setAnio(Number(e.target.value))}
+              className="border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-rose-300">
+              {aniosDisp.map(a=><option key={a} value={a}>{a}</option>)}
+            </select>
+          )}
         </div>
       </div>
 
@@ -347,7 +371,7 @@ function Dashboard({ ingresos, gastos, costos, precios }) {
           <KPI label="Ingresos" actual={totalIng} prev={prevIng} color="emerald"/>
           <KPI label="Gastos" actual={totalGas} prev={prevGas} color="rose"/>
           <KPI label="Ganancia" actual={ganancia} prev={prevGan} color="blue"/>
-          <KPI label="Utilidades Repartidas" actual={0} prev={0} color="amber"/>
+          <KPI label="Utilidades Repartidas" actual={utilidades} prev={utilPrev} color="amber"/>
         </div>
       </section>
 
@@ -693,6 +717,8 @@ function Movimientos({ tipo, registros, setRegistros, productos, precios }) {
   const [form, setForm] = useState({});
   const [editIdx, setEditIdx] = useState(null);
   const [tipoPrecio, setTipoPrecio] = useState("normal");
+  const [busqueda, setBusqueda] = useState("");
+  const [orden, setOrden] = useState("desc");
   const esIngreso = tipo==="ingreso";
   const getPU = (prodId,tp) => { const pr=precios.find(p=>p.productoId===prodId); if(!pr) return ""; if(tp==="mayoreo") return pr.precioMayoreo||""; if(tp==="super") return pr.precioSuperMayoreo||""; return pr.precioNormal||""; };
   const openNew = () => { setForm({fecha:today(),nombreProducto:"",codigoProducto:"",cantidad:1,precioUnitario:"",precioFinal:"",cliente:"",proveedor:"",estatus:"En proceso",pago:"Pendiente",observacion:""}); setTipoPrecio("normal"); setManual(false); setEditIdx(null); setModal(true); };
@@ -701,31 +727,104 @@ function Movimientos({ tipo, registros, setRegistros, productos, precios }) {
   const onTipo = (tp) => { setTipoPrecio(tp); if(form.codigoProducto){ const pu=getPU(form.codigoProducto,tp); setForm(f=>({...f,precioUnitario:pu,precioFinal:pu?pu*(f.cantidad||1):""})); } };
   const onQty = (v) => setForm(f=>({...f,cantidad:v,precioFinal:f.precioUnitario?f.precioUnitario*v:""}));
   const save = () => { const arr=[...registros]; const e={...form,id:form.id||uid(),cantidad:Number(form.cantidad)||1,precioUnitario:Number(form.precioUnitario)||0,precioFinal:Number(form.precioFinal)||0}; if(editIdx!==null) arr[editIdx]=e; else arr.push(e); setRegistros(arr); setModal(false); };
-  const del = (i) => { if(confirm("¿Eliminar?")) setRegistros(registros.filter((_,j)=>j!==i)); };
+  const del = (idx) => { if(confirm("¿Eliminar?")) setRegistros(registros.filter((_,j)=>j!==idx)); };
   const sc = {"En proceso":"amber","Entregado":"green","Cancelado":"red"};
   const pc = {"Pagado":"green","Pendiente":"amber","Anticipo":"blue"};
+
+  const registrosFiltrados = useMemo(() => {
+    let arr = [...registros];
+    if (busqueda.trim()) {
+      const b = busqueda.toLowerCase();
+      arr = arr.filter(r => {
+        const cp = (esIngreso?r.cliente:r.proveedor)||"";
+        return cp.toLowerCase().includes(b) || (r.nombreProducto||"").toLowerCase().includes(b);
+      });
+    }
+    arr.sort((a,b) => orden==="desc"?(b.fecha||"").localeCompare(a.fecha||""):(a.fecha||"").localeCompare(b.fecha||""));
+    return arr;
+  }, [registros, busqueda, orden, esIngreso]);
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <div><h2 className="text-2xl font-black text-gray-800">{esIngreso?"Ingresos":"Gastos"}</h2><p className="text-gray-400 text-sm">{registros.length} registros</p></div>
+        <div><h2 className="text-2xl font-black text-gray-800">{esIngreso?"Ingresos":"Gastos"}</h2><p className="text-gray-400 text-sm">{registrosFiltrados.length} de {registros.length} registros</p></div>
         <Btn onClick={openNew} variant={esIngreso?"success":"primary"} size="sm">+ Nuevo</Btn>
       </div>
+      <div className="flex gap-2">
+        <div className="flex-1 relative">
+          <input value={busqueda} onChange={e=>setBusqueda(e.target.value)}
+            placeholder={`Buscar ${esIngreso?"cliente":"proveedor"} o producto...`}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 bg-gray-50"/>
+          {busqueda&&<button onClick={()=>setBusqueda("")} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 text-xs">✕</button>}
+        </div>
+        <button onClick={()=>setOrden(o=>o==="desc"?"asc":"desc")}
+          className="border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold bg-gray-50 hover:bg-gray-100 transition">
+          Fecha {orden==="desc"?"↓":"↑"}
+        </button>
+      </div>
       <Card>
-        {registros.length===0 ? <p className="text-center text-gray-400 py-8 text-sm">Sin registros</p>
-          : registros.map((r,i)=>(
-            <div key={i} className="p-4 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition">
-              <div className="flex items-start justify-between mb-2">
-                <div><span className="font-bold text-gray-800">{r.nombreProducto||r.concepto||"—"}</span>{r.codigoProducto&&<Badge color="blue">{r.codigoProducto}</Badge>}<p className="text-xs text-gray-400 mt-0.5">{esIngreso?r.cliente:r.proveedor} · {r.fecha}</p></div>
-                <div className="text-right"><p className={`font-black text-lg ${esIngreso?"text-emerald-600":"text-rose-500"}`}>{fmt(r.precioFinal)}</p><p className="text-xs text-gray-400">{r.cantidad} × {fmt(r.precioUnitario)}</p></div>
+        {registrosFiltrados.length===0
+          ? <p className="text-center text-gray-400 py-8 text-sm">{busqueda?"Sin resultados":"Sin registros"}</p>
+          : registrosFiltrados.map((r,i)=>{
+            const origIdx = registros.indexOf(r);
+            return (
+              <div key={r.id||i} className="p-4 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-black text-gray-900 text-base truncate">{(esIngreso?r.cliente:r.proveedor)||"—"}</p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className="text-sm text-gray-500">{r.nombreProducto||r.concepto||"—"}</span>
+                      {r.codigoProducto&&<Badge color="blue">{r.codigoProducto}</Badge>}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">{r.fecha}</p>
+                  </div>
+                  <div className="text-right ml-3 flex-shrink-0">
+                    <p className={`font-black text-lg ${esIngreso?"text-emerald-600":"text-rose-500"}`}>{fmt(r.precioFinal)}</p>
+                    <p className="text-xs text-gray-400">{r.cantidad} × {fmt(r.precioUnitario)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-2"><Badge color={sc[r.estatus]||"gray"}>{r.estatus}</Badge><Badge color={pc[r.pago]||"gray"}>{r.pago}</Badge></div>
+                  <div className="flex gap-1"><Btn onClick={()=>openEdit(origIdx)} variant="ghost" size="sm">✏️</Btn><Btn onClick={()=>del(origIdx)} variant="ghost" size="sm">🗑️</Btn></div>
+                </div>
+                {r.observacion&&<p className="text-xs text-gray-400 mt-2 bg-gray-50 rounded-lg px-2 py-1">📝 {r.observacion}</p>}
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex gap-2"><Badge color={sc[r.estatus]||"gray"}>{r.estatus}</Badge><Badge color={pc[r.pago]||"gray"}>{r.pago}</Badge></div>
-                <div className="flex gap-1"><Btn onClick={()=>openEdit(i)} variant="ghost" size="sm">✏️</Btn><Btn onClick={()=>del(i)} variant="ghost" size="sm">🗑️</Btn></div>
-              </div>
-              {r.observacion&&<p className="text-xs text-gray-400 mt-2 bg-gray-50 rounded-lg px-2 py-1">📝 {r.observacion}</p>}
-            </div>
-          ))}
+            );
+          })}
       </Card>
+      {modal&&(
+        <Modal title={editIdx!==null?`Editar ${esIngreso?"Ingreso":"Gasto"}`:`Nuevo ${esIngreso?"Ingreso":"Gasto"}`} onClose={()=>setModal(false)}>
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
+              <button onClick={()=>setManual(false)} className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition ${!manual?"bg-white shadow text-gray-800":"text-gray-400"}`}>📦 Desde catálogo</button>
+              <button onClick={()=>setManual(true)} className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition ${manual?"bg-white shadow text-gray-800":"text-gray-400"}`}>✏️ Manual</button>
+            </div>
+            {!manual
+              ? <><Select label="Producto" value={form.codigoProducto} onChange={onProd} options={productos.map(p=>({value:p.id,label:`${p.id} - ${p.nombre}`}))}/><Select label="Tipo de Precio" value={tipoPrecio} onChange={onTipo} options={[{value:"normal",label:"Normal"},{value:"mayoreo",label:"Mayoreo"},{value:"super",label:"Super Mayoreo"}]}/></>
+              : <div className="grid grid-cols-2 gap-3"><Input label="Código" value={form.codigoProducto} onChange={v=>setForm({...form,codigoProducto:v})}/><Input label="Nombre" value={form.nombreProducto} onChange={v=>setForm({...form,nombreProducto:v})}/></div>
+            }
+            <Input label="Fecha" type="date" value={form.fecha} onChange={v=>setForm({...form,fecha:v})} required/>
+            <div className="grid grid-cols-3 gap-3">
+              <Input label="Cantidad" type="number" value={form.cantidad} onChange={onQty}/>
+              <Input label="Precio Unitario" type="number" value={form.precioUnitario} onChange={v=>setForm({...form,precioUnitario:v,precioFinal:v*(form.cantidad||1)})}/>
+              <Input label="Precio Final" type="number" value={form.precioFinal} onChange={v=>setForm({...form,precioFinal:v})}/>
+            </div>
+            <Input label={esIngreso?"Cliente":"Proveedor"} value={esIngreso?form.cliente:form.proveedor} onChange={v=>setForm({...form,[esIngreso?"cliente":"proveedor"]:v})}/>
+            <div className="grid grid-cols-2 gap-3">
+              <Select label="Estatus" value={form.estatus} onChange={v=>setForm({...form,estatus:v})} options={[{value:"En proceso",label:"En proceso"},{value:"Entregado",label:"Entregado"},{value:"Cancelado",label:"Cancelado"}]}/>
+              <Select label="Pago" value={form.pago} onChange={v=>setForm({...form,pago:v})} options={[{value:"Pagado",label:"Pagado"},{value:"Pendiente",label:"Pendiente"},{value:"Anticipo",label:"Anticipo"}]}/>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Observación</label>
+              <textarea value={form.observacion} onChange={e=>setForm({...form,observacion:e.target.value})} className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 bg-gray-50 h-16 resize-none"/>
+            </div>
+            <div className="flex gap-3 justify-end pt-2"><Btn variant="secondary" onClick={()=>setModal(false)}>Cancelar</Btn><Btn variant={esIngreso?"success":"primary"} onClick={save}>Guardar</Btn></div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
       {modal&&(
         <Modal title={editIdx!==null?`Editar ${esIngreso?"Ingreso":"Gasto"}`:`Nuevo ${esIngreso?"Ingreso":"Gasto"}`} onClose={()=>setModal(false)}>
           <div className="flex flex-col gap-3">
@@ -841,18 +940,18 @@ function Importar({ setProductos, setTemperaturas, setPrecios, setCostos, setIng
   };
 
   // ── Ejecutar importación ──────────────────────────────────────────────────
-  const importar = () => {
+  const importar = async () => {
     const prog = {};
-    Object.entries(preview).forEach(([hoja, filas]) => {
+    for (const [hoja, filas] of Object.entries(preview)) {
       const datos = transformar(hoja, filas);
       prog[hoja] = datos.length;
-      if (hoja === "Productos")    setProductos(prev    => modoImport==="reemplazar" ? datos : [...prev, ...datos]);
-      if (hoja === "Temperaturas") setTemperaturas(prev => modoImport==="reemplazar" ? datos : [...prev, ...datos]);
-      if (hoja === "Precios")      setPrecios(prev      => modoImport==="reemplazar" ? datos : [...prev, ...datos]);
-      if (hoja === "Margen")       setCostos(prev       => modoImport==="reemplazar" ? datos : [...prev, ...datos]);
-      if (hoja === "Ingresos")     setIngresos(prev     => modoImport==="reemplazar" ? datos : [...prev, ...datos]);
-      if (hoja === "Gastos")       setGastos(prev       => modoImport==="reemplazar" ? datos : [...prev, ...datos]);
-    });
+      if (hoja === "Productos")    await setProductos(modoImport==="reemplazar" ? datos : (prev => [...prev, ...datos]));
+      if (hoja === "Temperaturas") await setTemperaturas(modoImport==="reemplazar" ? datos : (prev => [...prev, ...datos]));
+      if (hoja === "Precios")      await setPrecios(modoImport==="reemplazar" ? datos : (prev => [...prev, ...datos]));
+      if (hoja === "Margen")       await setCostos(modoImport==="reemplazar" ? datos : (prev => [...prev, ...datos]));
+      if (hoja === "Ingresos")     await setIngresos(modoImport==="reemplazar" ? datos : (prev => [...prev, ...datos]));
+      if (hoja === "Gastos")       await setGastos(modoImport==="reemplazar" ? datos : (prev => [...prev, ...datos]));
+    }
     setProgreso(prog);
     setEstado("importado");
   };
