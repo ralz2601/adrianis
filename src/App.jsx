@@ -228,14 +228,14 @@ function Dashboard({ ingresos, gastos, costos, precios }) {
   // Utilidades desde gastos con concepto "Utilidad"
   const utilidades = useMemo(() => {
     return gasActual.filter(r => {
-      const c = (r.nombreProducto||r.concepto||r.proveedor||"").toLowerCase();
-      return c.includes("utilidad");
+      const campos = [r.nombreProducto, r.concepto, r.proveedor, r.observacion].map(v=>(v||"").toLowerCase());
+      return campos.some(c => c.includes("utilidad"));
     }).reduce((s,r)=>s+(r.precioFinal||0),0);
   },[gasActual]);
   const utilPrev = useMemo(() => {
     return gasAnterior.filter(r => {
-      const c = (r.nombreProducto||r.concepto||r.proveedor||"").toLowerCase();
-      return c.includes("utilidad");
+      const campos = [r.nombreProducto, r.concepto, r.proveedor, r.observacion].map(v=>(v||"").toLowerCase());
+      return campos.some(c => c.includes("utilidad"));
     }).reduce((s,r)=>s+(r.precioFinal||0),0);
   },[gasAnterior]);
 
