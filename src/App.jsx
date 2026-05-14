@@ -225,18 +225,28 @@ function Dashboard({ ingresos, gastos, costos, precios }) {
   const prevIng  = suma(ingAnterior), prevGas = suma(gasAnterior);
   const prevGan  = prevIng - prevGas;
 
-  // Utilidades desde gastos con concepto "Utilidad"
+  // Utilidades desde gastos
   const utilidades = useMemo(() => {
-    return gasActual.filter(r => {
+    const filtrar = (arr, texto) => arr.filter(r => {
       const campos = [r.nombreProducto, r.concepto, r.proveedor, r.observacion].map(v=>(v||"").toLowerCase());
-      return campos.some(c => c.includes("utilidad"));
+      return campos.some(c => c.includes(texto.toLowerCase()));
     }).reduce((s,r)=>s+(r.precioFinal||0),0);
+    return {
+      adrian: filtrar(gasActual, "utilidad adrián") || filtrar(gasActual, "utilidad adrian"),
+      anahi:  filtrar(gasActual, "utilidad anahí")  || filtrar(gasActual, "utilidad anahi"),
+      total:  filtrar(gasActual, "utilidad"),
+    };
   },[gasActual]);
   const utilPrev = useMemo(() => {
-    return gasAnterior.filter(r => {
+    const filtrar = (arr, texto) => arr.filter(r => {
       const campos = [r.nombreProducto, r.concepto, r.proveedor, r.observacion].map(v=>(v||"").toLowerCase());
-      return campos.some(c => c.includes("utilidad"));
+      return campos.some(c => c.includes(texto.toLowerCase()));
     }).reduce((s,r)=>s+(r.precioFinal||0),0);
+    return {
+      adrian: filtrar(gasAnterior, "utilidad adrián") || filtrar(gasAnterior, "utilidad adrian"),
+      anahi:  filtrar(gasAnterior, "utilidad anahí")  || filtrar(gasAnterior, "utilidad anahi"),
+      total:  filtrar(gasAnterior, "utilidad"),
+    };
   },[gasAnterior]);
 
   const aniosDisp = useMemo(() => {
@@ -300,8 +310,8 @@ function Dashboard({ ingresos, gastos, costos, precios }) {
   const KPI = ({label,actual,prev,color="rose"}) => {
     const diff = modo==="todo" ? null : diffPct(actual,prev);
     const sube = diff>0;
-    const bgs = {rose:"border-rose-200 bg-rose-50",emerald:"border-emerald-200 bg-emerald-50",blue:"border-blue-200 bg-blue-50",amber:"border-amber-200 bg-amber-50"};
-    const txs = {rose:"text-rose-600",emerald:"text-emerald-600",blue:"text-blue-600",amber:"text-amber-600"};
+    const bgs = {rose:"border-rose-200 bg-rose-50",emerald:"border-emerald-200 bg-emerald-50",blue:"border-blue-200 bg-blue-50",amber:"border-amber-200 bg-amber-50",purple:"border-purple-200 bg-purple-50"};
+    const txs = {rose:"text-rose-600",emerald:"text-emerald-600",blue:"text-blue-600",amber:"text-amber-600",purple:"text-purple-600"};
     return (
       <Card className={`p-4 border-l-4 ${bgs[color]}`}>
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
@@ -371,7 +381,11 @@ function Dashboard({ ingresos, gastos, costos, precios }) {
           <KPI label="Ingresos" actual={totalIng} prev={prevIng} color="emerald"/>
           <KPI label="Gastos" actual={totalGas} prev={prevGas} color="rose"/>
           <KPI label="Ganancia" actual={ganancia} prev={prevGan} color="blue"/>
-          <KPI label="Utilidades Repartidas" actual={utilidades} prev={utilPrev} color="amber"/>
+          <KPI label="Utilidades Totales" actual={utilidades.total} prev={utilPrev.total} color="amber"/>
+        </div>
+        <div className="grid grid-cols-2 gap-3 mt-3">
+          <KPI label="Utilidad Adrián" actual={utilidades.adrian} prev={utilPrev.adrian} color="purple"/>
+          <KPI label="Utilidad Anahí" actual={utilidades.anahi} prev={utilPrev.anahi} color="rose"/>
         </div>
       </section>
 
