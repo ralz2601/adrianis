@@ -282,7 +282,7 @@ function Dashboard({ ingresos, gastos, costos, precios }) {
   const topProductos = useMemo(() => {
     const m={};
     ingActual.forEach(r=>{ const k=r.nombreProducto||r.codigoProducto||"Sin nombre"; if(!m[k]) m[k]={qty:0,monto:0}; m[k].qty+=(r.cantidad||1); m[k].monto+=(r.precioFinal||0); });
-    return Object.entries(m).sort((a,b)=>b[1].qty-a[1].qty).slice(0,5);
+    return Object.entries(m).sort((a,b)=>b[1].monto-a[1].monto).slice(0,5);
   },[ingActual]);
 
   const analisisPrecios = useMemo(() => {
