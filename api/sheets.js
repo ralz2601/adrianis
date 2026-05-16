@@ -19,9 +19,14 @@ function getAuth() {
   });
 }
 
+const NUMERIC_FIELDS = new Set(["temp","tiempo","precioNormal","precioMayoreo","cantMayoreo","precioSuperMayoreo","cantSuperMayoreo","costoProducto","dtf","tinta","papel","otros","cantidad","precioUnitario","precioFinal"]);
+
 function rowToObj(headers, row) {
   const obj = {};
-  headers.forEach((h, i) => { obj[h] = row[i] ?? ""; });
+  headers.forEach((h, i) => {
+    const val = row[i] ?? "";
+    obj[h] = NUMERIC_FIELDS.has(h) ? (val === "" ? 0 : Number(val) || 0) : val;
+  });
   return obj;
 }
 
