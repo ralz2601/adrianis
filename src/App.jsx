@@ -77,7 +77,7 @@ const today = () => new Date().toISOString().split("T")[0];
 
 function calcCosto(c) {
   if (!c) return 0;
-  return (c.costoProducto||0)+(c.dtf||0)+(c.tinta||0)+(c.papel||0)+(c.otros||0);
+  return (Number(c.costoProducto)||0)+(Number(c.dtf)||0)+(Number(c.tinta)||0)+(Number(c.papel)||0)+(Number(c.otros)||0);
 }
 function calcMargen(precio, costo) {
   if (!precio||!costo) return null;
@@ -219,7 +219,7 @@ function Dashboard({ ingresos, gastos, costos, precios }) {
     return filtrar(gastos,anio-1,mes,false);
   }, [gastos,anio,mes,modo]);
 
-  const suma = arr => arr.reduce((s,r)=>s+(r.precioFinal||0),0);
+  const suma = arr => arr.reduce((s,r)=>s+(Number(r.precioFinal)||0),0);
   const totalIng = suma(ingActual), totalGas = suma(gasActual);
   const ganancia = totalIng - totalGas;
   const prevIng  = suma(ingAnterior), prevGas = suma(gasAnterior);
@@ -230,7 +230,7 @@ function Dashboard({ ingresos, gastos, costos, precios }) {
     const filtrar = (arr, texto) => arr.filter(r => {
       const campos = [r.nombreProducto, r.concepto, r.proveedor, r.observacion].map(v=>(v||"").toLowerCase());
       return campos.some(c => c.includes(texto.toLowerCase()));
-    }).reduce((s,r)=>s+(r.precioFinal||0),0);
+    }).reduce((s,r)=>s+(Number(r.precioFinal)||0),0);
     return {
       adrian: filtrar(gasActual, "utilidad adrián") || filtrar(gasActual, "utilidad adrian"),
       anahi:  filtrar(gasActual, "utilidad anahí")  || filtrar(gasActual, "utilidad anahi"),
@@ -241,7 +241,7 @@ function Dashboard({ ingresos, gastos, costos, precios }) {
     const filtrar = (arr, texto) => arr.filter(r => {
       const campos = [r.nombreProducto, r.concepto, r.proveedor, r.observacion].map(v=>(v||"").toLowerCase());
       return campos.some(c => c.includes(texto.toLowerCase()));
-    }).reduce((s,r)=>s+(r.precioFinal||0),0);
+    }).reduce((s,r)=>s+(Number(r.precioFinal)||0),0);
     return {
       adrian: filtrar(gasAnterior, "utilidad adrián") || filtrar(gasAnterior, "utilidad adrian"),
       anahi:  filtrar(gasAnterior, "utilidad anahí")  || filtrar(gasAnterior, "utilidad anahi"),
@@ -281,7 +281,7 @@ function Dashboard({ ingresos, gastos, costos, precios }) {
 
   const topProductos = useMemo(() => {
     const m={};
-    ingActual.forEach(r=>{ const k=r.nombreProducto||r.codigoProducto||"Sin nombre"; if(!m[k]) m[k]={qty:0,monto:0}; m[k].qty+=(r.cantidad||1); m[k].monto+=(r.precioFinal||0); });
+    ingActual.forEach(r=>{ const k=r.nombreProducto||r.codigoProducto||"Sin nombre"; if(!m[k]) m[k]={qty:0,monto:0}; m[k].qty+=(Number(r.cantidad)||1); m[k].monto+=(Number(r.precioFinal)||0); });
     return Object.entries(m).sort((a,b)=>b[1].monto-a[1].monto).slice(0,5);
   },[ingActual]);
 
@@ -291,7 +291,7 @@ function Dashboard({ ingresos, gastos, costos, precios }) {
       const costoItem=costos.find(c=>c.productoId===r.codigoProducto);
       const costoU=calcCosto(costoItem);
       const pr=precios.find(p=>p.productoId===r.codigoProducto);
-      const qty=r.cantidad||1, monto=r.precioFinal||0, costoTotal=costoU*qty;
+      const qty=Number(r.cantidad)||1, monto=Number(r.precioFinal)||0, costoTotal=costoU*qty;
       let tipo="manual";
       if(pr){ const pu=Number(r.precioUnitario); if(pu===pr.precioSuperMayoreo) tipo="super"; else if(pu===pr.precioMayoreo) tipo="mayoreo"; else if(pu===pr.precioNormal) tipo="normal"; }
       tipos[tipo].qty+=qty; tipos[tipo].monto+=monto; tipos[tipo].costo+=costoTotal;
