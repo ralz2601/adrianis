@@ -145,7 +145,52 @@ function Select({ label, value, onChange, options, placeholder="Seleccionar...",
   );
 }
 
-function Modal({ title, children, onClose }) {
+function SearchSelect({ label, value, onChange, options, placeholder="Buscar...", required=false }) {
+  const [query, setQuery] = useState(value||"");
+  const [open, setOpen] = useState(false);
+  const ref = useRef();
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return options.slice(0,10);
+    return options.filter(o => o.label.toLowerCase().includes(query.toLowerCase())).slice(0,10);
+  }, [query, options]);
+
+  useEffect(() => {
+    const sel = options.find(o=>o.value===value);
+    if (sel) setQuery(sel.label);
+  }, [value]);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const select = (opt) => { onChange(opt.value); setQuery(opt.label); setOpen(false); };
+  const clear = () => { onChange(""); setQuery(""); setOpen(false); };
+
+  return (
+    <div className="flex flex-col gap-1 relative" ref={ref}>
+      {label && <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}{required&&<span className="text-rose-400 ml-0.5">*</span>}</label>}
+      <div className="relative">
+        <input value={query} onChange={e=>{ setQuery(e.target.value); setOpen(true); if(!e.target.value) onChange(""); }}
+          onFocus={()=>setOpen(true)} placeholder={placeholder}
+          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 bg-gray-50 pr-8"/>
+        {query && <button onClick={clear} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 text-xs">✕</button>}
+      </div>
+      {open && filtered.length > 0 && (
+        <div className="absolute top-full left-0 right-0 z-50 bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-48 overflow-y-auto">
+          {filtered.map(opt=>(
+            <button key={opt.value} onClick={()=>select(opt)}
+              className="w-full text-left px-3 py-2.5 text-sm hover:bg-rose-50 hover:text-rose-700 border-b border-gray-50 last:border-0 transition">
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -979,11 +1024,11 @@ function Movimientos({ tipo, registros, setRegistros, productos, precios, client
             </div>
             {!manual
               ? <>
-                  <Select label="Producto / Insumo" value={form.codigoProducto} onChange={onProd}
+                  <SearchSelect label="Producto / Insumo" value={form.codigoProducto} onChange={onProd}
                     options={[
                       ...productos.filter(p=>p.id?.toUpperCase().startsWith("AA")).map(p=>({value:p.id,label:`[Producto] ${p.id} - ${p.nombre}`})),
                       ...(esIngreso ? [] : productos.filter(p=>p.id?.toUpperCase().startsWith("I")).map(p=>({value:p.id,label:`[Insumo] ${p.id} - ${p.nombre}`}))),
-                    ]}/>
+                    ]} placeholder="Buscar producto..."/>
                   <Select label="Tipo de Precio" value={tipoPrecio} onChange={onTipo} options={[{value:"normal",label:"Normal"},{value:"mayoreo",label:"Mayoreo"},{value:"super",label:"Super Mayoreo"}]}/>
                 </>
               : <div className="grid grid-cols-2 gap-3"><Input label="Código" value={form.codigoProducto} onChange={v=>setForm({...form,codigoProducto:v})}/><Input label="Nombre" value={form.nombreProducto} onChange={v=>setForm({...form,nombreProducto:v})}/></div>
@@ -996,20 +1041,17 @@ function Movimientos({ tipo, registros, setRegistros, productos, precios, client
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{esIngreso?"Cliente":"Proveedor"}<span className="text-rose-400 ml-0.5">*</span></label>
-              {(esIngreso ? clientes : proveedores).length > 0 ? (
-                <select value={esIngreso?form.cliente:form.proveedor} onChange={e=>setForm({...form,[esIngreso?"cliente":"proveedor"]:e.target.value})}
-                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 bg-gray-50">
-                  <option value="">Seleccionar...</option>
-                  {(esIngreso?clientes:proveedores).map(c=><option key={c.id} value={c.nombre}>{c.nombre}</option>)}
-                  <option value="__manual__">✏️ Escribir manualmente</option>
-                </select>
-              ) : null}
-              {((esIngreso?form.cliente:form.proveedor)==="__manual__" || (esIngreso?clientes:proveedores).length===0) && (
-                <input value={esIngreso?form.cliente:form.proveedor==="__manual__"?"":form.proveedor}
-                  onChange={e=>setForm({...form,[esIngreso?"cliente":"proveedor"]:e.target.value})}
-                  placeholder={`Nombre del ${esIngreso?"cliente":"proveedor"}`}
-                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 bg-gray-50 mt-1"/>
-              )}
+              {(esIngreso ? clientes : proveedores).length > 0
+                ? <SearchSelect
+                    value={esIngreso?form.cliente:form.proveedor}
+                    onChange={v=>setForm({...form,[esIngreso?"cliente":"proveedor"]:v})}
+                    options={(esIngreso?clientes:proveedores).map(c=>({value:c.nombre,label:c.nombre}))}
+                    placeholder={`Buscar ${esIngreso?"cliente":"proveedor"}...`}/>
+                : <input value={esIngreso?form.cliente:form.proveedor}
+                    onChange={e=>setForm({...form,[esIngreso?"cliente":"proveedor"]:e.target.value})}
+                    placeholder={`Nombre del ${esIngreso?"cliente":"proveedor"}`}
+                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 bg-gray-50"/>
+              }
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Select label="Estatus" value={form.estatus} onChange={v=>setForm({...form,estatus:v})} options={[{value:"En proceso",label:"En proceso"},{value:"Entregado",label:"Entregado"},{value:"Cancelado",label:"Cancelado"}]}/>
