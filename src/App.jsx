@@ -191,6 +191,8 @@ function SearchSelect({ label, value, onChange, options, placeholder="Buscar..."
     </div>
   );
 }
+
+function Modal({ title, children, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
