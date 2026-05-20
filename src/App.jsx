@@ -168,23 +168,32 @@ function Login({ onLogin }) {
     if (u) { onLogin(u); setErr(""); } else setErr("Correo o contraseña incorrectos");
   };
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{background:"linear-gradient(135deg,#fff5f5 0%,#fce7e7 50%,#fff 100%)"}}>
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center" style={{background:"linear-gradient(135deg,#0a0a0a 0%,#1a1410 50%,#0d0d0d 100%)"}}>
+      <div className="w-full max-w-sm px-4">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-rose-500 shadow-lg mb-4">
-            <span className="text-white text-2xl font-black">A</span>
-          </div>
-          <h1 className="text-3xl font-black text-gray-800 tracking-tight">AdriAnis</h1>
-          <p className="text-gray-400 text-sm mt-1">Sistema de Gestión</p>
+          <img src="/Logo_D1.png" alt="AdriAnis" className="w-48 mx-auto mb-2"/>
+          <p className="text-amber-400/60 text-sm mt-1">Sistema de Gestión</p>
         </div>
-        <Card className="p-6 shadow-xl">
+        <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-6 shadow-2xl">
           <div className="flex flex-col gap-4">
-            <Input label="Correo" value={email} onChange={setEmail} type="email" placeholder="tu@correo.com"/>
-            <Input label="Contraseña" value={pass} onChange={setPass} type="password" placeholder="••••••••"/>
-            {err && <p className="text-red-500 text-xs text-center">{err}</p>}
-            <Btn onClick={handle} size="lg" className="w-full mt-1">Iniciar Sesión</Btn>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-amber-400/80 uppercase tracking-wide">Correo</label>
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="tu@correo.com"
+                className="border border-white/10 rounded-xl px-3 py-2 text-sm bg-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-amber-500/50"/>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-amber-400/80 uppercase tracking-wide">Contraseña</label>
+              <input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••"
+                className="border border-white/10 rounded-xl px-3 py-2 text-sm bg-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-amber-500/50"/>
+            </div>
+            {err && <p className="text-red-400 text-xs text-center">{err}</p>}
+            <button onClick={handle}
+              className="w-full py-3 rounded-xl font-bold text-sm text-black mt-1 transition-all hover:opacity-90"
+              style={{background:"linear-gradient(135deg,#c9a227,#f0d060,#c9a227)"}}>
+              Iniciar Sesión
+            </button>
           </div>
-        </Card>
+        </div>
       </div>
     </div>
   );
@@ -662,6 +671,7 @@ function Temperaturas({ temperaturas, setTemperaturas, productos }) {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({productoId:"",temp:"",tiempo:"",indicaciones:""});
   const [editIdx, setEditIdx] = useState(null);
+  const [busqueda, setBusqueda] = useState("");
   const pNombre = (id) => productos.find(p=>p.id===id)?.nombre||id;
   const openNew = () => { setForm({productoId:"",temp:"",tiempo:"",indicaciones:""}); setEditIdx(null); setModal(true); };
   const openEdit = (i) => { setForm({...temperaturas[i]}); setEditIdx(i); setModal(true); };
@@ -673,15 +683,21 @@ function Temperaturas({ temperaturas, setTemperaturas, productos }) {
     setTemperaturas(arr); setModal(false);
   };
   const del = (i) => { if(confirm("¿Eliminar?")) setTemperaturas(temperaturas.filter((_,j)=>j!==i)); };
+  const lista = temperaturas.filter(t => !busqueda || pNombre(t.productoId).toLowerCase().includes(busqueda.toLowerCase()) || t.productoId.toLowerCase().includes(busqueda.toLowerCase()));
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div><h2 className="text-2xl font-black text-gray-800">Temperaturas</h2><p className="text-gray-400 text-sm">Parámetros de planchado por producto</p></div>
         <Btn onClick={openNew} size="sm">+ Nuevo</Btn>
       </div>
+      <div className="relative">
+        <input value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar producto..."
+          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 bg-gray-50"/>
+        {busqueda&&<button onClick={()=>setBusqueda("")} className="absolute right-3 top-2.5 text-gray-400 text-xs">✕</button>}
+      </div>
       <div className="space-y-3">
-        {temperaturas.length===0 ? <Card><p className="text-center text-gray-400 py-8 text-sm">Sin registros</p></Card>
-          : temperaturas.map((t,i)=>(
+        {lista.length===0 ? <Card><p className="text-center text-gray-400 py-8 text-sm">Sin resultados</p></Card>
+          : lista.map((t,i)=>(
             <Card key={i} className="p-4">
               <div className="flex items-start justify-between mb-3">
                 <div><Badge color="purple">{t.productoId}</Badge><span className="font-bold text-gray-800 ml-2">{pNombre(t.productoId)}</span></div>
@@ -726,6 +742,7 @@ function Precios({ precios, setPrecios, productos }) {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({productoId:"",precioNormal:"",precioMayoreo:"",cantMayoreo:"",precioSuperMayoreo:"",cantSuperMayoreo:"",observacion:""});
   const [editIdx, setEditIdx] = useState(null);
+  const [busqueda, setBusqueda] = useState("");
   const pNombre = (id) => productos.find(p=>p.id===id)?.nombre||id;
   const openNew = () => { setForm({productoId:"",precioNormal:"",precioMayoreo:"",cantMayoreo:"",precioSuperMayoreo:"",cantSuperMayoreo:"",observacion:""}); setEditIdx(null); setModal(true); };
   const openEdit = (i) => { setForm({...precios[i],precioSuperMayoreo:precios[i].precioSuperMayoreo??'',cantSuperMayoreo:precios[i].cantSuperMayoreo??''}); setEditIdx(i); setModal(true); };
@@ -737,18 +754,24 @@ function Precios({ precios, setPrecios, productos }) {
     setPrecios(arr); setModal(false);
   };
   const del = (i) => { if(confirm("¿Eliminar?")) setPrecios(precios.filter((_,j)=>j!==i)); };
+  const lista = precios.filter(p => !busqueda || pNombre(p.productoId).toLowerCase().includes(busqueda.toLowerCase()) || p.productoId.toLowerCase().includes(busqueda.toLowerCase()));
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div><h2 className="text-2xl font-black text-gray-800">Costos y Precios</h2><p className="text-gray-400 text-sm">Niveles por volumen</p></div>
         <Btn onClick={openNew} size="sm">+ Nuevo</Btn>
       </div>
+      <div className="relative">
+        <input value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar producto..."
+          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 bg-gray-50"/>
+        {busqueda&&<button onClick={()=>setBusqueda("")} className="absolute right-3 top-2.5 text-gray-400 text-xs">✕</button>}
+      </div>
       <div className="space-y-3">
-        {precios.map((p,i)=>(
+        {lista.map((p,i)=>(
           <Card key={i} className="p-4">
             <div className="flex items-center justify-between mb-3">
               <div><Badge color="blue">{p.productoId}</Badge><span className="font-bold text-gray-800 ml-2">{pNombre(p.productoId)}</span></div>
-              <div className="flex gap-1"><Btn onClick={()=>openEdit(i)} variant="ghost" size="sm">✏️</Btn><Btn onClick={()=>del(i)} variant="ghost" size="sm">🗑️</Btn></div>
+              <div className="flex gap-1"><Btn onClick={()=>openEdit(precios.indexOf(p))} variant="ghost" size="sm">✏️</Btn><Btn onClick={()=>del(precios.indexOf(p))} variant="ghost" size="sm">🗑️</Btn></div>
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-gray-50 rounded-xl p-3 text-center"><p className="text-xs text-gray-400 font-semibold mb-1">Normal</p><p className="text-lg font-black text-gray-700">{fmt(p.precioNormal)}</p><p className="text-xs text-gray-400">1 pieza</p></div>
@@ -787,6 +810,7 @@ function Margen({ costos, setCostos, precios, productos }) {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({productoId:"",costoProducto:"",dtf:"",tinta:"",papel:"",otros:""});
   const [editIdx, setEditIdx] = useState(null);
+  const [busqueda, setBusqueda] = useState("");
   const pNombre = (id) => productos.find(p=>p.id===id)?.nombre||id;
   const getPrecio = (id) => precios.find(p=>p.productoId===id);
   const openNew = () => { setForm({productoId:"",costoProducto:"",dtf:"",tinta:"",papel:"",otros:""}); setEditIdx(null); setModal(true); };
@@ -799,6 +823,7 @@ function Margen({ costos, setCostos, precios, productos }) {
     setCostos(arr); setModal(false);
   };
   const del = (i) => { if(confirm("¿Eliminar?")) setCostos(costos.filter((_,j)=>j!==i)); };
+  const listaM = costos.filter(c => !busqueda || pNombre(c.productoId).toLowerCase().includes(busqueda.toLowerCase()) || c.productoId.toLowerCase().includes(busqueda.toLowerCase()));
   const Bar = ({label,precio,costo}) => {
     if (!precio) return null;
     const mg=calcMargen(precio,costo), p2=Math.max(0,Math.min(100,(mg||0)*100));
@@ -820,14 +845,19 @@ function Margen({ costos, setCostos, precios, productos }) {
         <div><h2 className="text-2xl font-black text-gray-800">Margen</h2><p className="text-gray-400 text-sm">Rentabilidad por producto</p></div>
         <Btn onClick={openNew} size="sm">+ Nuevo</Btn>
       </div>
+      <div className="relative">
+        <input value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar producto..."
+          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 bg-gray-50"/>
+        {busqueda&&<button onClick={()=>setBusqueda("")} className="absolute right-3 top-2.5 text-gray-400 text-xs">✕</button>}
+      </div>
       <div className="space-y-3">
-        {costos.map((c,i)=>{
+        {listaM.map((c,i)=>{
           const total=calcCosto(c), pr=getPrecio(c.productoId);
           return (
             <Card key={i} className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <div><Badge color="green">{c.productoId}</Badge><span className="font-bold text-gray-800 ml-2">{pNombre(c.productoId)}</span></div>
-                <div className="flex gap-1"><Btn onClick={()=>openEdit(i)} variant="ghost" size="sm">✏️</Btn><Btn onClick={()=>del(i)} variant="ghost" size="sm">🗑️</Btn></div>
+                <div className="flex gap-1"><Btn onClick={()=>openEdit(costos.indexOf(c))} variant="ghost" size="sm">✏️</Btn><Btn onClick={()=>del(costos.indexOf(c))} variant="ghost" size="sm">🗑️</Btn></div>
               </div>
               <div className="grid grid-cols-5 gap-1 mb-3 text-center">
                 {[["Producto",c.costoProducto],["DTF",c.dtf],["Tinta",c.tinta],["Papel",c.papel],["Otros",c.otros]].map(([lbl,val])=>(
@@ -952,7 +982,7 @@ function Movimientos({ tipo, registros, setRegistros, productos, precios, client
                   <Select label="Producto / Insumo" value={form.codigoProducto} onChange={onProd}
                     options={[
                       ...productos.filter(p=>p.id?.toUpperCase().startsWith("AA")).map(p=>({value:p.id,label:`[Producto] ${p.id} - ${p.nombre}`})),
-                      ...productos.filter(p=>p.id?.toUpperCase().startsWith("I")).map(p=>({value:p.id,label:`[Insumo] ${p.id} - ${p.nombre}`})),
+                      ...(esIngreso ? [] : productos.filter(p=>p.id?.toUpperCase().startsWith("I")).map(p=>({value:p.id,label:`[Insumo] ${p.id} - ${p.nombre}`}))),
                     ]}/>
                   <Select label="Tipo de Precio" value={tipoPrecio} onChange={onTipo} options={[{value:"normal",label:"Normal"},{value:"mayoreo",label:"Mayoreo"},{value:"super",label:"Super Mayoreo"}]}/>
                 </>
@@ -1349,8 +1379,7 @@ export default function App() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-rose-500 rounded-lg flex items-center justify-center"><span className="text-white font-black text-sm">A</span></div>
-          <span className="font-black text-gray-800 text-lg tracking-tight">AdriAnis</span>
+          <img src="/Logo_D1.png" alt="AdriAnis" className="h-8 w-auto"/>
         </div>
         <div className="flex items-center gap-3">
           {syncMsg && <span className="text-xs text-emerald-600 font-semibold">{syncMsg}</span>}
