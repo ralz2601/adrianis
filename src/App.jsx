@@ -171,7 +171,7 @@ function Login({ onLogin }) {
     <div className="min-h-screen flex items-center justify-center" style={{background:"linear-gradient(135deg,#0a0a0a 0%,#1a1410 50%,#0d0d0d 100%)"}}>
       <div className="w-full max-w-sm px-4">
         <div className="text-center mb-8">
-          <img src="/Logo_D1.png" alt="AdriAnis" className="w-48 mx-auto mb-2"/>
+          <img src="/Logo.png" alt="AdriAnis" className="w-48 mx-auto mb-2"/>
           <p className="text-amber-400/60 text-sm mt-1">Sistema de Gestión</p>
         </div>
         <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-6 shadow-2xl">
@@ -1379,7 +1379,7 @@ export default function App() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-2">
-          <img src="/Logo_D1.png" alt="AdriAnis" className="h-8 w-auto"/>
+          <img src="/Logo.png" alt="AdriAnis" className="h-8 w-auto"/>
         </div>
         <div className="flex items-center gap-3">
           {syncMsg && <span className="text-xs text-emerald-600 font-semibold">{syncMsg}</span>}
