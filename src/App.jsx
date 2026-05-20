@@ -70,7 +70,7 @@ const USUARIOS = [
 
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
-const fmt = (n) => n != null ? `$${Number(n).toLocaleString("es-MX", { minimumFractionDigits: 2 })}` : "N/A";
+const fmt = (n) => n != null ? `$${Number(n).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "N/A";
 const pct = (n) => n != null ? `${(n * 100).toFixed(1)}%` : "N/A";
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 const today = () => new Date().toISOString().split("T")[0];
@@ -488,34 +488,168 @@ function Productos({ productos, setProductos }) {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({id:"",nombre:""});
   const [editIdx, setEditIdx] = useState(null);
-  const openNew = () => { setForm({id:"",nombre:""}); setEditIdx(null); setModal(true); };
-  const openEdit = (i) => { setForm({...productos[i]}); setEditIdx(i); setModal(true); };
+  const [tab, setTab] = useState("productos"); // "productos" | "insumos"
+
+  const esProd = (p) => p.id?.toUpperCase().startsWith("AA");
+  const esInsumo = (p) => p.id?.toUpperCase().startsWith("I");
+  const lista = tab==="productos" ? productos.filter(esProd) : productos.filter(esInsumo);
+
+  const openNew = () => { setForm({id: tab==="insumos"?"I-":"AA-", nombre:""}); setEditIdx(null); setModal(true); };
+  const openEdit = (p) => { setForm({...p}); setEditIdx(productos.indexOf(p)); setModal(true); };
   const save = () => {
     if (!form.id||!form.nombre) return;
     const arr=[...productos]; if(editIdx!==null) arr[editIdx]=form; else arr.push(form);
     setProductos(arr); setModal(false);
   };
-  const del = (i) => { if(confirm("¿Eliminar producto?")) setProductos(productos.filter((_,j)=>j!==i)); };
+  const del = (p) => { if(confirm("¿Eliminar?")) setProductos(productos.filter(x=>x.id!==p.id)); };
+
+  const Tab = ({k,label}) => (
+    <button onClick={()=>setTab(k)} className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${tab===k?"bg-white shadow text-gray-800":"text-gray-400"}`}>{label}</button>
+  );
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <div><h2 className="text-2xl font-black text-gray-800">Productos</h2><p className="text-gray-400 text-sm">Catálogo base</p></div>
+        <div><h2 className="text-2xl font-black text-gray-800">Catálogo</h2><p className="text-gray-400 text-sm">{lista.length} registros</p></div>
         <Btn onClick={openNew} size="sm">+ Nuevo</Btn>
       </div>
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+        <Tab k="productos" label="Productos (AA)"/>
+        <Tab k="insumos" label="Insumos (I)"/>
+      </div>
       <Card>
-        {productos.length===0 ? <p className="text-center text-gray-400 py-8 text-sm">Sin productos</p>
-          : productos.map((p,i)=>(
+        {lista.length===0 ? <p className="text-center text-gray-400 py-8 text-sm">Sin {tab}</p>
+          : lista.map((p,i)=>(
             <div key={i} className="flex items-center justify-between p-4 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition">
-              <div className="flex items-center gap-3"><Badge color="blue">{p.id}</Badge><span className="font-semibold text-gray-700">{p.nombre}</span></div>
-              <div className="flex gap-2"><Btn onClick={()=>openEdit(i)} variant="ghost" size="sm">✏️</Btn><Btn onClick={()=>del(i)} variant="ghost" size="sm">🗑️</Btn></div>
+              <div className="flex items-center gap-3">
+                <Badge color={tab==="productos"?"blue":"purple"}>{p.id}</Badge>
+                <span className="font-semibold text-gray-700">{p.nombre}</span>
+              </div>
+              <div className="flex gap-2"><Btn onClick={()=>openEdit(p)} variant="ghost" size="sm">✏️</Btn><Btn onClick={()=>del(p)} variant="ghost" size="sm">🗑️</Btn></div>
             </div>
           ))}
       </Card>
       {modal&&(
-        <Modal title={editIdx!==null?"Editar Producto":"Nuevo Producto"} onClose={()=>setModal(false)}>
+        <Modal title={editIdx!==null?"Editar":"Nuevo"} onClose={()=>setModal(false)}>
           <div className="flex flex-col gap-4">
-            <Input label="Código" value={form.id} onChange={v=>setForm({...form,id:v})} placeholder="AA-001" required/>
-            <Input label="Nombre" value={form.nombre} onChange={v=>setForm({...form,nombre:v})} placeholder="Taza cerámica" required/>
+            <Input label="Código" value={form.id} onChange={v=>setForm({...form,id:v})} placeholder={tab==="productos"?"AA-001":"I-001"} required/>
+            <Input label="Nombre" value={form.nombre} onChange={v=>setForm({...form,nombre:v})} placeholder="Nombre del producto" required/>
+            <div className="flex gap-3 justify-end pt-2"><Btn variant="secondary" onClick={()=>setModal(false)}>Cancelar</Btn><Btn onClick={save}>Guardar</Btn></div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ── CATÁLOGO DE CLIENTES ─────────────────────────────────────────────────────
+function Clientes({ clientes, setClientes }) {
+  const [modal, setModal] = useState(false);
+  const [form, setForm] = useState({id:"",nombre:"",telefono:"",email:"",observacion:""});
+  const [editIdx, setEditIdx] = useState(null);
+  const [busqueda, setBusqueda] = useState("");
+
+  const lista = clientes.filter(c => !busqueda || c.nombre.toLowerCase().includes(busqueda.toLowerCase()));
+  const openNew = () => { setForm({id:uid(),nombre:"",telefono:"",email:"",observacion:""}); setEditIdx(null); setModal(true); };
+  const openEdit = (i) => { setForm({...clientes[i]}); setEditIdx(i); setModal(true); };
+  const save = () => {
+    if (!form.nombre) return;
+    const arr=[...clientes]; if(editIdx!==null) arr[editIdx]=form; else arr.push(form);
+    setClientes(arr); setModal(false);
+  };
+  const del = (i) => { if(confirm("¿Eliminar cliente?")) setClientes(clientes.filter((_,j)=>j!==i)); };
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div><h2 className="text-2xl font-black text-gray-800">Clientes</h2><p className="text-gray-400 text-sm">{clientes.length} registros</p></div>
+        <Btn onClick={openNew} size="sm">+ Nuevo</Btn>
+      </div>
+      <div className="relative">
+        <input value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar cliente..."
+          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 bg-gray-50"/>
+        {busqueda&&<button onClick={()=>setBusqueda("")} className="absolute right-3 top-2.5 text-gray-400 text-xs">✕</button>}
+      </div>
+      <Card>
+        {lista.length===0 ? <p className="text-center text-gray-400 py-8 text-sm">Sin clientes</p>
+          : lista.map((c,i)=>(
+            <div key={i} className="flex items-center justify-between p-4 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition">
+              <div>
+                <p className="font-bold text-gray-800">{c.nombre}</p>
+                <p className="text-xs text-gray-400">{[c.telefono,c.email].filter(Boolean).join(" · ")}</p>
+              </div>
+              <div className="flex gap-2"><Btn onClick={()=>openEdit(clientes.indexOf(c))} variant="ghost" size="sm">✏️</Btn><Btn onClick={()=>del(clientes.indexOf(c))} variant="ghost" size="sm">🗑️</Btn></div>
+            </div>
+          ))}
+      </Card>
+      {modal&&(
+        <Modal title={editIdx!==null?"Editar Cliente":"Nuevo Cliente"} onClose={()=>setModal(false)}>
+          <div className="flex flex-col gap-3">
+            <Input label="Nombre" value={form.nombre} onChange={v=>setForm({...form,nombre:v})} required/>
+            <Input label="Teléfono" value={form.telefono} onChange={v=>setForm({...form,telefono:v})}/>
+            <Input label="Email" value={form.email} onChange={v=>setForm({...form,email:v})}/>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Observación</label>
+              <textarea value={form.observacion} onChange={e=>setForm({...form,observacion:e.target.value})} className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 bg-gray-50 h-16 resize-none"/>
+            </div>
+            <div className="flex gap-3 justify-end pt-2"><Btn variant="secondary" onClick={()=>setModal(false)}>Cancelar</Btn><Btn onClick={save}>Guardar</Btn></div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ── CATÁLOGO DE PROVEEDORES ──────────────────────────────────────────────────
+function Proveedores({ proveedores, setProveedores }) {
+  const [modal, setModal] = useState(false);
+  const [form, setForm] = useState({id:"",nombre:"",telefono:"",email:"",observacion:""});
+  const [editIdx, setEditIdx] = useState(null);
+  const [busqueda, setBusqueda] = useState("");
+
+  const lista = proveedores.filter(p => !busqueda || p.nombre.toLowerCase().includes(busqueda.toLowerCase()));
+  const openNew = () => { setForm({id:uid(),nombre:"",telefono:"",email:"",observacion:""}); setEditIdx(null); setModal(true); };
+  const openEdit = (i) => { setForm({...proveedores[i]}); setEditIdx(i); setModal(true); };
+  const save = () => {
+    if (!form.nombre) return;
+    const arr=[...proveedores]; if(editIdx!==null) arr[editIdx]=form; else arr.push(form);
+    setProveedores(arr); setModal(false);
+  };
+  const del = (i) => { if(confirm("¿Eliminar proveedor?")) setProveedores(proveedores.filter((_,j)=>j!==i)); };
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div><h2 className="text-2xl font-black text-gray-800">Proveedores</h2><p className="text-gray-400 text-sm">{proveedores.length} registros</p></div>
+        <Btn onClick={openNew} size="sm">+ Nuevo</Btn>
+      </div>
+      <div className="relative">
+        <input value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar proveedor..."
+          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 bg-gray-50"/>
+        {busqueda&&<button onClick={()=>setBusqueda("")} className="absolute right-3 top-2.5 text-gray-400 text-xs">✕</button>}
+      </div>
+      <Card>
+        {lista.length===0 ? <p className="text-center text-gray-400 py-8 text-sm">Sin proveedores</p>
+          : lista.map((p,i)=>(
+            <div key={i} className="flex items-center justify-between p-4 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition">
+              <div>
+                <p className="font-bold text-gray-800">{p.nombre}</p>
+                <p className="text-xs text-gray-400">{[p.telefono,p.email].filter(Boolean).join(" · ")}</p>
+              </div>
+              <div className="flex gap-2"><Btn onClick={()=>openEdit(proveedores.indexOf(p))} variant="ghost" size="sm">✏️</Btn><Btn onClick={()=>del(proveedores.indexOf(p))} variant="ghost" size="sm">🗑️</Btn></div>
+            </div>
+          ))}
+      </Card>
+      {modal&&(
+        <Modal title={editIdx!==null?"Editar Proveedor":"Nuevo Proveedor"} onClose={()=>setModal(false)}>
+          <div className="flex flex-col gap-3">
+            <Input label="Nombre" value={form.nombre} onChange={v=>setForm({...form,nombre:v})} required/>
+            <Input label="Teléfono" value={form.telefono} onChange={v=>setForm({...form,telefono:v})}/>
+            <Input label="Email" value={form.email} onChange={v=>setForm({...form,email:v})}/>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Observación</label>
+              <textarea value={form.observacion} onChange={e=>setForm({...form,observacion:e.target.value})} className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 bg-gray-50 h-16 resize-none"/>
+            </div>
             <div className="flex gap-3 justify-end pt-2"><Btn variant="secondary" onClick={()=>setModal(false)}>Cancelar</Btn><Btn onClick={save}>Guardar</Btn></div>
           </div>
         </Modal>
@@ -725,7 +859,7 @@ function Margen({ costos, setCostos, precios, productos }) {
   );
 }
 
-function Movimientos({ tipo, registros, setRegistros, productos, precios }) {
+function Movimientos({ tipo, registros, setRegistros, productos, precios, clientes, proveedores }) {
   const [modal, setModal] = useState(false);
   const [manual, setManual] = useState(false);
   const [form, setForm] = useState({});
@@ -814,7 +948,14 @@ function Movimientos({ tipo, registros, setRegistros, productos, precios }) {
               <button onClick={()=>setManual(true)} className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition ${manual?"bg-white shadow text-gray-800":"text-gray-400"}`}>✏️ Manual</button>
             </div>
             {!manual
-              ? <><Select label="Producto" value={form.codigoProducto} onChange={onProd} options={productos.map(p=>({value:p.id,label:`${p.id} - ${p.nombre}`}))}/><Select label="Tipo de Precio" value={tipoPrecio} onChange={onTipo} options={[{value:"normal",label:"Normal"},{value:"mayoreo",label:"Mayoreo"},{value:"super",label:"Super Mayoreo"}]}/></>
+              ? <>
+                  <Select label="Producto / Insumo" value={form.codigoProducto} onChange={onProd}
+                    options={[
+                      ...productos.filter(p=>p.id?.toUpperCase().startsWith("AA")).map(p=>({value:p.id,label:`[Producto] ${p.id} - ${p.nombre}`})),
+                      ...productos.filter(p=>p.id?.toUpperCase().startsWith("I")).map(p=>({value:p.id,label:`[Insumo] ${p.id} - ${p.nombre}`})),
+                    ]}/>
+                  <Select label="Tipo de Precio" value={tipoPrecio} onChange={onTipo} options={[{value:"normal",label:"Normal"},{value:"mayoreo",label:"Mayoreo"},{value:"super",label:"Super Mayoreo"}]}/>
+                </>
               : <div className="grid grid-cols-2 gap-3"><Input label="Código" value={form.codigoProducto} onChange={v=>setForm({...form,codigoProducto:v})}/><Input label="Nombre" value={form.nombreProducto} onChange={v=>setForm({...form,nombreProducto:v})}/></div>
             }
             <Input label="Fecha" type="date" value={form.fecha} onChange={v=>setForm({...form,fecha:v})} required/>
@@ -823,7 +964,23 @@ function Movimientos({ tipo, registros, setRegistros, productos, precios }) {
               <Input label="Precio Unitario" type="number" value={form.precioUnitario} onChange={v=>setForm({...form,precioUnitario:v,precioFinal:v*(form.cantidad||1)})}/>
               <Input label="Precio Final" type="number" value={form.precioFinal} onChange={v=>setForm({...form,precioFinal:v})}/>
             </div>
-            <Input label={esIngreso?"Cliente":"Proveedor"} value={esIngreso?form.cliente:form.proveedor} onChange={v=>setForm({...form,[esIngreso?"cliente":"proveedor"]:v})}/>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{esIngreso?"Cliente":"Proveedor"}<span className="text-rose-400 ml-0.5">*</span></label>
+              {(esIngreso ? clientes : proveedores).length > 0 ? (
+                <select value={esIngreso?form.cliente:form.proveedor} onChange={e=>setForm({...form,[esIngreso?"cliente":"proveedor"]:e.target.value})}
+                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 bg-gray-50">
+                  <option value="">Seleccionar...</option>
+                  {(esIngreso?clientes:proveedores).map(c=><option key={c.id} value={c.nombre}>{c.nombre}</option>)}
+                  <option value="__manual__">✏️ Escribir manualmente</option>
+                </select>
+              ) : null}
+              {((esIngreso?form.cliente:form.proveedor)==="__manual__" || (esIngreso?clientes:proveedores).length===0) && (
+                <input value={esIngreso?form.cliente:form.proveedor==="__manual__"?"":form.proveedor}
+                  onChange={e=>setForm({...form,[esIngreso?"cliente":"proveedor"]:e.target.value})}
+                  placeholder={`Nombre del ${esIngreso?"cliente":"proveedor"}`}
+                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 bg-gray-50 mt-1"/>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <Select label="Estatus" value={form.estatus} onChange={v=>setForm({...form,estatus:v})} options={[{value:"En proceso",label:"En proceso"},{value:"Entregado",label:"Entregado"},{value:"Cancelado",label:"Cancelado"}]}/>
               <Select label="Pago" value={form.pago} onChange={v=>setForm({...form,pago:v})} options={[{value:"Pagado",label:"Pagado"},{value:"Pendiente",label:"Pendiente"},{value:"Anticipo",label:"Anticipo"}]}/>
@@ -1163,6 +1320,8 @@ export default function App() {
   const [costos,       setCostos,       syncCostos]       = useStore("aa_costos",       COSTOS_INIT,       "Margen");
   const [ingresos,     setIngresos,     syncIngresos]     = useStore("aa_ingresos",     [],                "Ingresos");
   const [gastos,       setGastos,       syncGastos]       = useStore("aa_gastos",       [],                "Gastos");
+  const [clientes,     setClientes,     syncClientes]     = useStore("aa_clientes",     [],                null);
+  const [proveedores,  setProveedores,  syncProveedores]  = useStore("aa_proveedores",  [],                null);
 
   const sincronizarTodo = async () => {
     setSyncMsg("Sincronizando...");
@@ -1177,6 +1336,8 @@ export default function App() {
     {key:"dashboard",    label:"Dashboard"},
     {key:"ingresos",     label:"Ingresos"},
     {key:"gastos",       label:"Gastos"},
+    {key:"clientes",     label:"Clientes"},
+    {key:"proveedores",  label:"Proveedores"},
     {key:"productos",    label:"Productos"},
     {key:"temperaturas", label:"Temperaturas"},
     {key:"precios",      label:"Precios"},
@@ -1209,8 +1370,10 @@ export default function App() {
         </nav>
         <main className="flex-1 p-4 sm:p-6 max-w-2xl w-full overflow-y-auto">
           {seccion==="dashboard"    && <Dashboard ingresos={ingresos} gastos={gastos} costos={costos} precios={precios}/>}
-          {seccion==="ingresos"     && <Movimientos tipo="ingreso" registros={ingresos} setRegistros={setIngresos} productos={productos} precios={precios}/>}
-          {seccion==="gastos"       && <Movimientos tipo="gasto"   registros={gastos}   setRegistros={setGastos}   productos={productos} precios={precios}/>}
+          {seccion==="ingresos"     && <Movimientos tipo="ingreso" registros={ingresos} setRegistros={setIngresos} productos={productos} precios={precios} clientes={clientes} proveedores={proveedores}/>}
+          {seccion==="gastos"       && <Movimientos tipo="gasto"   registros={gastos}   setRegistros={setGastos}   productos={productos} precios={precios} clientes={clientes} proveedores={proveedores}/>}
+          {seccion==="clientes"     && <Clientes    clientes={clientes}   setClientes={setClientes}/>}
+          {seccion==="proveedores"  && <Proveedores proveedores={proveedores} setProveedores={setProveedores}/>}
           {seccion==="productos"    && <Productos    productos={productos} setProductos={setProductos}/>}
           {seccion==="temperaturas" && <Temperaturas temperaturas={temperaturas} setTemperaturas={setTemperaturas} productos={productos}/>}
           {seccion==="precios"      && <Precios      precios={precios} setPrecios={setPrecios} productos={productos}/>}
