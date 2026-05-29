@@ -1124,6 +1124,8 @@ function Importar({ setProductos, setTemperaturas, setPrecios, setCostos, setIng
     Margen:       ["Codigo","CostoProducto","DTF","Tinta","Papel","Otros"],
     Ingresos:     ["Fecha","Codigo","NombreProducto","Cliente","Cantidad","PrecioUnitario","PrecioFinal","Estatus","Pago","Observacion"],
     Gastos:       ["Fecha","Codigo","NombreProducto","Proveedor","Cantidad","PrecioUnitario","PrecioFinal","Estatus","Pago","Observacion"],
+    Clientes:     ["id","Nombre","Telefono","Email","Observacion"],
+    Proveedores:  ["id","Nombre","Telefono","Email","Observacion"],
   };
 
   // ── Parsear fecha de Excel (número o string) ──────────────────────────────
@@ -1181,6 +1183,8 @@ function Importar({ setProductos, setTemperaturas, setPrecios, setCostos, setIng
     if (hoja === "Margen") return filas.filter(r=>r.Codigo).map(r=>({ productoId: String(r.Codigo).trim(), costoProducto: Number(r.CostoProducto)||0, dtf: Number(r.DTF)||0, tinta: Number(r.Tinta)||0, papel: Number(r.Papel)||0, otros: Number(r.Otros)||0 }));
     if (hoja === "Ingresos") return filas.filter(r=>r.Fecha).map(r=>({ id: uid(), fecha: parseFecha(r.Fecha), codigoProducto: String(r.Codigo||"").trim(), nombreProducto: String(r.NombreProducto||"").trim(), cliente: String(r.Cliente||"").trim(), cantidad: Number(r.Cantidad)||1, precioUnitario: Number(r.PrecioUnitario)||0, precioFinal: Number(r.PrecioFinal)||0, estatus: r.Estatus||"Entregado", pago: r.Pago||"Pagado", observacion: String(r.Observacion||"").trim() }));
     if (hoja === "Gastos") return filas.filter(r=>r.Fecha).map(r=>({ id: uid(), fecha: parseFecha(r.Fecha), codigoProducto: String(r.Codigo||"").trim(), nombreProducto: String(r.NombreProducto||"").trim(), proveedor: String(r.Proveedor||"").trim(), cantidad: Number(r.Cantidad)||1, precioUnitario: Number(r.PrecioUnitario)||0, precioFinal: Number(r.PrecioFinal)||0, estatus: r.Estatus||"Entregado", pago: r.Pago||"Pagado", observacion: String(r.Observacion||"").trim() }));
+    if (hoja === "Clientes") return filas.filter(r=>r.Nombre).map(r=>({ id: uid(), nombre: String(r.Nombre||"").trim(), telefono: String(r.Telefono||"").trim(), email: String(r.Email||"").trim(), observacion: String(r.Observacion||"").trim() }));
+    if (hoja === "Proveedores") return filas.filter(r=>r.Nombre).map(r=>({ id: uid(), nombre: String(r.Nombre||"").trim(), telefono: String(r.Telefono||"").trim(), email: String(r.Email||"").trim(), observacion: String(r.Observacion||"").trim() }));
     return [];
   };
 
@@ -1196,6 +1200,8 @@ function Importar({ setProductos, setTemperaturas, setPrecios, setCostos, setIng
       if (hoja === "Margen")       await setCostos(modoImport==="reemplazar" ? datos : (prev => [...prev, ...datos]));
       if (hoja === "Ingresos")     await setIngresos(modoImport==="reemplazar" ? datos : (prev => [...prev, ...datos]));
       if (hoja === "Gastos")       await setGastos(modoImport==="reemplazar" ? datos : (prev => [...prev, ...datos]));
+      if (hoja === "Clientes")     await setClientes(modoImport==="reemplazar" ? datos : (prev => [...prev, ...datos]));
+      if (hoja === "Proveedores")  await setProveedores(modoImport==="reemplazar" ? datos : (prev => [...prev, ...datos]));
     }
     setProgreso(prog);
     setEstado("importado");
@@ -1213,6 +1219,8 @@ function Importar({ setProductos, setTemperaturas, setPrecios, setCostos, setIng
       Margen:       [["Codigo","CostoProducto","DTF","Tinta","Papel","Otros"],["AA-001",98,0,6,5,0]],
       Ingresos:     [["Fecha","Codigo","NombreProducto","Cliente","Cantidad","PrecioUnitario","PrecioFinal","Estatus","Pago","Observacion"],["2026-01-15","AA-001","Termo Skinny","Juan Pérez",2,250,500,"Entregado","Pagado",""]],
       Gastos:       [["Fecha","Codigo","NombreProducto","Proveedor","Cantidad","PrecioUnitario","PrecioFinal","Estatus","Pago","Observacion"],["2026-01-10","AA-001","Termo Skinny","Proveedor SA",10,98,980,"Entregado","Pagado",""]],
+      Clientes:     [["id","Nombre","Telefono","Email","Observacion"],["","Juan Pérez","3312345678","juan@email.com","Cliente frecuente"]],
+      Proveedores:  [["id","Nombre","Telefono","Email","Observacion"],["","Mercado Libre","","","Compras en línea"]],
     };
 
     Object.entries(hojas).forEach(([nombre, datos]) => {
@@ -1228,7 +1236,7 @@ function Importar({ setProductos, setTemperaturas, setPrecios, setCostos, setIng
   const resetear = () => { setEstado("idle"); setPreview(null); setErrMsg(""); setProgreso({}); if(fileRef.current) fileRef.current.value=""; };
 
   // ── Colores por hoja ──────────────────────────────────────────────────────
-  const hojaColor = { Productos:"blue", Temperaturas:"purple", Precios:"amber", Margen:"green", Ingresos:"emerald", Gastos:"rose" };
+  const hojaColor = { Productos:"blue", Temperaturas:"purple", Precios:"amber", Margen:"green", Ingresos:"emerald", Gastos:"rose", Clientes:"blue", Proveedores:"gray" };
 
   return (
     <div className="space-y-5">
@@ -1427,12 +1435,12 @@ export default function App() {
   const [costos,       setCostos,       syncCostos]       = useStore("aa_costos",       COSTOS_INIT,       "Margen");
   const [ingresos,     setIngresos,     syncIngresos]     = useStore("aa_ingresos",     [],                "Ingresos");
   const [gastos,       setGastos,       syncGastos]       = useStore("aa_gastos",       [],                "Gastos");
-  const [clientes,     setClientes,     syncClientes]     = useStore("aa_clientes",     [],                null);
-  const [proveedores,  setProveedores,  syncProveedores]  = useStore("aa_proveedores",  [],                null);
+  const [clientes,     setClientes,     syncClientes]     = useStore("aa_clientes",     [],                "Clientes");
+  const [proveedores,  setProveedores,  syncProveedores]  = useStore("aa_proveedores",  [],                "Proveedores");
 
   const sincronizarTodo = async () => {
     setSyncMsg("Sincronizando...");
-    await Promise.all([syncProductos(), syncTemperaturas(), syncPrecios(), syncCostos(), syncIngresos(), syncGastos()]);
+    await Promise.all([syncProductos(), syncTemperaturas(), syncPrecios(), syncCostos(), syncIngresos(), syncGastos(), syncClientes(), syncProveedores()]);
     setSyncMsg("✅ Sincronizado");
     setTimeout(() => setSyncMsg(""), 3000);
   };

@@ -9,6 +9,8 @@ const HEADERS = {
   Margen:       ["productoId", "costoProducto", "dtf", "tinta", "papel", "otros"],
   Ingresos:     ["id", "fecha", "codigoProducto", "nombreProducto", "cliente", "cantidad", "precioUnitario", "precioFinal", "estatus", "pago", "observacion"],
   Gastos:       ["id", "fecha", "codigoProducto", "nombreProducto", "proveedor", "cantidad", "precioUnitario", "precioFinal", "estatus", "pago", "observacion"],
+  Clientes:     ["id", "nombre", "telefono", "email", "observacion"],
+  Proveedores:  ["id", "nombre", "telefono", "email", "observacion"],
 };
 
 function getAuth() {
@@ -51,7 +53,6 @@ export default async function handler(req, res) {
 
     const headers = HEADERS[sheet];
 
-    // ── GET: leer datos ──────────────────────────────────────────────────────
     if (req.method === "GET") {
       if (action === "read") {
         const response = await sheets.spreadsheets.values.get({
@@ -65,12 +66,10 @@ export default async function handler(req, res) {
       }
     }
 
-    // ── POST: escribir datos ─────────────────────────────────────────────────
     if (req.method === "POST") {
       const { data } = req.body;
 
       if (action === "write") {
-        // Reemplazar toda la hoja
         const rows = [headers, ...data.map(obj => objToRow(headers, obj))];
         await sheets.spreadsheets.values.update({
           spreadsheetId: SPREADSHEET_ID,
@@ -82,7 +81,6 @@ export default async function handler(req, res) {
       }
 
       if (action === "append") {
-        // Agregar filas al final
         const rows = data.map(obj => objToRow(headers, obj));
         await sheets.spreadsheets.values.append({
           spreadsheetId: SPREADSHEET_ID,
