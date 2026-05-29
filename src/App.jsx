@@ -1107,7 +1107,7 @@ function Movimientos({ tipo, registros, setRegistros, productos, precios, client
 // ══════════════════════════════════════════════════════════════════════════════
 // IMPORTAR (módulo de importación masiva desde Excel)
 // ══════════════════════════════════════════════════════════════════════════════
-function Importar({ setProductos, setTemperaturas, setPrecios, setCostos, setIngresos, setGastos }) {
+function Importar({ setProductos, setTemperaturas, setPrecios, setCostos, setIngresos, setGastos, setClientes, setProveedores }) {
   const XLSX = useXLSX();
   const fileRef = useRef();
   const [estado, setEstado] = useState("idle"); // idle | leyendo | preview | importado | error
@@ -1492,7 +1492,7 @@ export default function App() {
           {seccion==="temperaturas" && <Temperaturas temperaturas={temperaturas} setTemperaturas={setTemperaturas} productos={productos}/>}
           {seccion==="precios"      && <Precios      precios={precios} setPrecios={setPrecios} productos={productos}/>}
           {seccion==="margen"       && <Margen       costos={costos}   setCostos={setCostos}   precios={precios} productos={productos}/>}
-          {seccion==="importar"     && <Importar setProductos={setProductos} setTemperaturas={setTemperaturas} setPrecios={setPrecios} setCostos={setCostos} setIngresos={setIngresos} setGastos={setGastos}/>}
+          {seccion==="importar"     && <Importar setProductos={setProductos} setTemperaturas={setTemperaturas} setPrecios={setPrecios} setCostos={setCostos} setIngresos={setIngresos} setGastos={setGastos} setClientes={setClientes} setProveedores={setProveedores}/>}
         </main>
       </div>
     </div>
