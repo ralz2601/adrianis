@@ -544,13 +544,29 @@ function Productos({ productos, setProductos }) {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({id:"",nombre:""});
   const [editIdx, setEditIdx] = useState(null);
-  const [tab, setTab] = useState("productos"); // "productos" | "insumos"
+  const [tab, setTab] = useState("productos");
+  const [busqueda, setBusqueda] = useState("");
+  const [orden, setOrden] = useState("asc");
 
   const esProd = (p) => p.id?.toUpperCase().startsWith("AA");
   const esInsumo = (p) => p.id?.toUpperCase().startsWith("I");
-  const lista = tab==="productos" ? productos.filter(esProd) : productos.filter(esInsumo);
 
-  const openNew = () => { setForm({id: tab==="insumos"?"I-":"AA-", nombre:""}); setEditIdx(null); setModal(true); };
+  const siguienteCodigo = (tipo) => {
+    const prefix = tipo==="productos" ? "AA" : "I";
+    const existentes = productos
+      .filter(p => tipo==="productos" ? esProd(p) : esInsumo(p))
+      .map(p => { const num = parseInt(p.id.replace(/[^0-9]/g,"")); return isNaN(num)?0:num; });
+    const siguiente = existentes.length>0 ? Math.max(...existentes)+1 : 1;
+    return `${prefix}-${String(siguiente).padStart(3,"0")}`;
+  };
+
+  const lista = useMemo(() => {
+    let arr = tab==="productos" ? productos.filter(esProd) : productos.filter(esInsumo);
+    if (busqueda) arr = arr.filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || p.id.toLowerCase().includes(busqueda.toLowerCase()));
+    return [...arr].sort((a,b) => orden==="asc" ? a.nombre.localeCompare(b.nombre) : b.nombre.localeCompare(a.nombre));
+  }, [productos, tab, busqueda, orden]);
+
+  const openNew = () => { setForm({id:siguienteCodigo(tab), nombre:""}); setEditIdx(null); setModal(true); };
   const openEdit = (p) => { setForm({...p}); setEditIdx(productos.indexOf(p)); setModal(true); };
   const save = () => {
     if (!form.id||!form.nombre) return;
@@ -573,8 +589,19 @@ function Productos({ productos, setProductos }) {
         <Tab k="productos" label="Productos (AA)"/>
         <Tab k="insumos" label="Insumos (I)"/>
       </div>
+      <div className="flex gap-2">
+        <div className="flex-1 relative">
+          <input value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Buscar por código o nombre..."
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 bg-gray-50"/>
+          {busqueda&&<button onClick={()=>setBusqueda("")} className="absolute right-3 top-2.5 text-gray-400 text-xs">✕</button>}
+        </div>
+        <button onClick={()=>setOrden(o=>o==="asc"?"desc":"asc")}
+          className="border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold bg-gray-50 hover:bg-gray-100 transition">
+          A-Z {orden==="asc"?"↑":"↓"}
+        </button>
+      </div>
       <Card>
-        {lista.length===0 ? <p className="text-center text-gray-400 py-8 text-sm">Sin {tab}</p>
+        {lista.length===0 ? <p className="text-center text-gray-400 py-8 text-sm">Sin resultados</p>
           : lista.map((p,i)=>(
             <div key={i} className="flex items-center justify-between p-4 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition">
               <div className="flex items-center gap-3">
@@ -588,7 +615,13 @@ function Productos({ productos, setProductos }) {
       {modal&&(
         <Modal title={editIdx!==null?"Editar":"Nuevo"} onClose={()=>setModal(false)}>
           <div className="flex flex-col gap-4">
-            <Input label="Código" value={form.id} onChange={v=>setForm({...form,id:v})} placeholder={tab==="productos"?"AA-001":"I-001"} required/>
+            <div className="flex items-end gap-2">
+              <div className="flex-1"><Input label="Código" value={form.id} onChange={v=>setForm({...form,id:v})} required/></div>
+              <button onClick={()=>setForm({...form,id:siguienteCodigo(tab)})}
+                className="px-3 py-2 text-xs font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition text-gray-600 mb-0.5">
+                Auto
+              </button>
+            </div>
             <Input label="Nombre" value={form.nombre} onChange={v=>setForm({...form,nombre:v})} placeholder="Nombre del producto" required/>
             <div className="flex gap-3 justify-end pt-2"><Btn variant="secondary" onClick={()=>setModal(false)}>Cancelar</Btn><Btn onClick={save}>Guardar</Btn></div>
           </div>
