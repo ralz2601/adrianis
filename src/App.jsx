@@ -563,7 +563,7 @@ function Productos({ productos, setProductos }) {
   const lista = useMemo(() => {
     let arr = tab==="productos" ? productos.filter(esProd) : productos.filter(esInsumo);
     if (busqueda) arr = arr.filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || p.id.toLowerCase().includes(busqueda.toLowerCase()));
-    return [...arr].sort((a,b) => orden==="asc" ? a.nombre.localeCompare(b.nombre) : b.nombre.localeCompare(a.nombre));
+    return [...arr].sort((a,b) => orden==="asc" ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id));
   }, [productos, tab, busqueda, orden]);
 
   const openNew = () => { setForm({id:siguienteCodigo(tab), nombre:""}); setEditIdx(null); setModal(true); };
@@ -597,7 +597,7 @@ function Productos({ productos, setProductos }) {
         </div>
         <button onClick={()=>setOrden(o=>o==="asc"?"desc":"asc")}
           className="border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold bg-gray-50 hover:bg-gray-100 transition">
-          A-Z {orden==="asc"?"↑":"↓"}
+          Código {orden==="asc"?"↑":"↓"}
         </button>
       </div>
       <Card>
@@ -1107,7 +1107,7 @@ function Movimientos({ tipo, registros, setRegistros, productos, precios, client
 // ══════════════════════════════════════════════════════════════════════════════
 // IMPORTAR (módulo de importación masiva desde Excel)
 // ══════════════════════════════════════════════════════════════════════════════
-function Importar({ setProductos, setTemperaturas, setPrecios, setCostos, setIngresos, setGastos, setClientes, setProveedores }) {
+function Importar({ setProductos, setTemperaturas, setPrecios, setCostos, setIngresos, setGastos }) {
   const XLSX = useXLSX();
   const fileRef = useRef();
   const [estado, setEstado] = useState("idle"); // idle | leyendo | preview | importado | error
@@ -1492,7 +1492,7 @@ export default function App() {
           {seccion==="temperaturas" && <Temperaturas temperaturas={temperaturas} setTemperaturas={setTemperaturas} productos={productos}/>}
           {seccion==="precios"      && <Precios      precios={precios} setPrecios={setPrecios} productos={productos}/>}
           {seccion==="margen"       && <Margen       costos={costos}   setCostos={setCostos}   precios={precios} productos={productos}/>}
-          {seccion==="importar"     && <Importar setProductos={setProductos} setTemperaturas={setTemperaturas} setPrecios={setPrecios} setCostos={setCostos} setIngresos={setIngresos} setGastos={setGastos} setClientes={setClientes} setProveedores={setProveedores}/>}
+          {seccion==="importar"     && <Importar setProductos={setProductos} setTemperaturas={setTemperaturas} setPrecios={setPrecios} setCostos={setCostos} setIngresos={setIngresos} setGastos={setGastos}/>}
         </main>
       </div>
     </div>
